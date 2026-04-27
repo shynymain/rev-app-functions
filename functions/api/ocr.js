@@ -3,26 +3,16 @@ export async function onRequestPost({ request, env }) {
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!file) {
-      return new Response(JSON.stringify({ ok: false, error: "No file" }), {
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
     const bytes = new Uint8Array(await file.arrayBuffer());
 
-    const result = await env.AI.run(
+    const ai = await env.AI.run(
       "@cf/meta/llama-3.2-11b-vision-instruct",
       {
         image: bytes,
         prompt: `
-この画像は競馬の出馬表・オッズ画面です。
-画像内の情報をJSON形式のみで出力してください。
+この画像は競馬の出馬表です。
+JSONのみで返してください。説明は禁止。
 
-説明は禁止。
-必ずJSONのみ。
-
-形式:
 {
   "horses": [
     {
@@ -36,13 +26,26 @@ export async function onRequestPost({ request, env }) {
     }
   ]
 }
-
-読めない場合は空文字。
 `
       }
     );
 
-    return new Response(JSON.stringify({ ok: true, result }), {
+    // 👇ここが超重要
+    let text = ai.response || "";
+
+    // ```json を除去
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return new Response(JSON.stringify({ ok: false, raw: text }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, data: parsed }), {
       headers: { "Content-Type": "application/json" }
     });
 
