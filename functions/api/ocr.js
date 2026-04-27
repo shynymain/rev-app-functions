@@ -1,12 +1,21 @@
-const result = await env.AI.run(
-  "@cf/meta/llama-3.2-11b-vision-instruct",
-  {
-    image: bytes,
-    prompt: "この画像の文字をすべて抽出してください"
-  }
-);      error: e.message
-    }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+prompt: `
+この画像は競馬の出馬表・オッズ・結果画面です。
+画像内の文字を読み取り、説明文は不要でJSONだけ返してください。
+
+{
+  "horses": [
+    {
+      "number": "",
+      "name": "",
+      "last1": "",
+      "last2": "",
+      "last3": "",
+      "odds": "",
+      "popularity": ""
+    }
+  ],
+  "text": ""
 }
+
+読めない項目は空文字。
+`
