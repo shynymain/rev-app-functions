@@ -1,40 +1,73 @@
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
   try {
-    if (!env.AI) {
-      return Response.json({ ok: false, error: "AI binding not found" }, { status: 500 });
-    }
-
-    const formData = await request.formData();
+    const formData = await context.request.formData();
     const file = formData.get("file");
 
     if (!file) {
-      return Response.json({ ok: false, error: "画像ファイルがありません" }, { status: 400 });
+      return new Response(JSON.stringify({
+        ok: false,
+        error: "ファイルなし"
+      }), { headers: { "Content-Type": "application/json" } });
     }
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const arrayBuffer = await file.arrayBuffer();
 
-    const ai = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
-      image: bytes,
-      temperature: 0,
-      prompt: `
-あなたは競馬画像専用OCRです。
+    const base64 = btoa(
+      new Uint8Array(arrayBuffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), "")
+    );
 
-絶対ルール：
-・JSONのみ返す
-・説明文禁止
-・Pythonコード禁止
-・Markdown禁止
-・コードブロック禁止
-・読めない項目は空文字
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${context.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: [{
+          role: "user",
+          content: [
+            { type: "input_text", text: "競馬出馬表をJSONで返して" },
+            {
+              type: "input_image",
+              image_url: `data:image/jpeg;base64,${base64}`
+            }
+          ]
+        }]
+      })
+    });
 
-出力形式：
-{
-  "horses": [
-    {
-      "number": "",
-      "name": "",
-      "last1": "",
-      "last2": "",
+    // ❗ ここ重要（1回だけ読む）
+    const text = await res.text();
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: "JSONパース失敗",
+        raw: text
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      result: json
+    }), {
+      headers: { "Content-Type": "application/json" }
+    });
+
+  } catch (e) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: e.message
+    }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}      "last2": "",
       "last3": "",
       "odds": "",
       "popularity": ""
