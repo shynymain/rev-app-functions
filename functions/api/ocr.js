@@ -1,17 +1,14 @@
-export async function onRequestPost({ request, env }) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file");
+prompt: `
+あなたはOCR専用エンジンです。
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
+以下を厳守：
+・説明文は禁止
+・Pythonコード禁止
+・文章禁止
+・JSONのみ出力
+・``` やコードブロック禁止
 
-    const ai = await env.AI.run(
-      "@cf/meta/llama-3.2-11b-vision-instruct",
-      {
-        image: bytes,
-        prompt: `
-この画像は競馬の出馬表です。
-JSONのみで出力してください。説明は禁止。
+出力形式は完全一致：
 
 {
   "horses": [
@@ -26,15 +23,11 @@ JSONのみで出力してください。説明は禁止。
     }
   ]
 }
+
+この形式以外は絶対に出力しない。
+
+画像内の競馬データを抽出せよ。
 `
-      }
-    );
-
-    let text = ai.response || "";
-
-    // ① ```削除
-    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
     // ② 改行除去
     text = text.replace(/\n/g, "").replace(/\r/g, "");
 
