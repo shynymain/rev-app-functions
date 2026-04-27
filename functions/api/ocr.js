@@ -39,18 +39,4 @@ export async function onRequestPost({ request, env }) {
       headers: { "Content-Type": "application/json" }
     });
   }
-}              }
-            ]
-          }
-        ]
-      }
-    );
-
-    return new Response(JSON.stringify(response), {
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (e) {
-    return new Response("ERROR: " + e.message);
-  }
 }
