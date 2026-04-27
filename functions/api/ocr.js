@@ -1,3 +1,4 @@
+return new Response("NEW OCR OK");
 export async function onRequestPost({ request, env }) {
   try {
     if (!env.AI) {
