@@ -11,30 +11,36 @@ export async function onRequestPost({ request, env }) {
       return json({ ok: false, error: "画像ファイルがありません" }, 400);
     }
 
-    if (file.size > 4 * 1024 * 1024) {
-      return json({
-        ok: false,
-        error: "画像が大きすぎます。スクショをトリミングするか、画像サイズを小さくしてください。",
-        sizeMB: Math.round(file.size / 1024 / 1024 * 10) / 10
-      }, 413);
-    }
-
     const image = [...new Uint8Array(await file.arrayBuffer())];
 
-  const prompt = "agree";
-返答はJSONのみ。説明不要。
+    // まずライセンス同意だけを通す
+    const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+      image,
+      prompt: "agree"
+    });
 
-{
-  "horses":[
-    {"number":"","name":"","last1":"","last2":"","last3":"","odds":"","popularity":""}
-  ],
-  "text":""
+    return json({
+      ok: true,
+      message: "agree送信成功",
+      result
+    });
+
+  } catch (e) {
+    return json({
+      ok: false,
+      error: String(e.message || e)
+    }, 500);
+  }
 }
 
-不明は空文字。
-`;
-
-    const aiResult = await Promise.race([
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+}    const aiResult = await Promise.race([
       env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
         image,
         prompt
