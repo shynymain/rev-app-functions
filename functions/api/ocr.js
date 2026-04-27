@@ -21,9 +21,7 @@ export async function onRequestPost({ request, env }) {
 
     const image = [...new Uint8Array(await file.arrayBuffer())];
 
-    const prompt = `agree
-
-画像から競馬情報を読み取ってください。
+  const prompt = "agree";
 返答はJSONのみ。説明不要。
 
 {
